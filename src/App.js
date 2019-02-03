@@ -1,30 +1,35 @@
 import React, { Component } from 'react';
 import './App.css';
 import logo from './I-love-secret-sauce.jpg';
-import CSVToArray from './csv';
 import sjcl from 'sjcl';
+import $ from 'jquery';
 
 function FileUpload(props) {
 
-  // Needed to cater for an empty line at the end if any.
-  const removeLastEmptyLines = (contents) => {
-    contents = contents.slice();
-    while(contents[contents.length - 1].length === 1) {
-      contents = contents.slice(0, contents.length - 1);
-    }
-    return contents;
-  };
-
   const handleFileUpload = (ev) => {
     const file = ev.target.files[0];
-    const reader = new FileReader();
-    reader.onload = (file) => {
-      const data = CSVToArray(reader.result);
-      const headers = data[0].map(h => { return {text: h, protected: false}; });
-      const contents = data.slice(1, data.length);
-      props.onUpload({headers: headers, contents: removeLastEmptyLines(contents)});
-    }
-    reader.readAsText(file);
+
+    var formData = new FormData();
+    formData.append("file", file, "some_name");
+    formData.append("upload_file", true);
+
+    $.ajax({
+      type: "POST",
+      url: "/upload",
+      success: function (data) {
+        props.onUpload(data);
+      },
+      errpr: function (error) {
+        console.log("error");
+        console.log(error);
+      },
+      async: true,
+      data: formData,
+      cache: false,
+      contentType: false,
+      processData: false,
+      timeout: 60000
+    });
   };
 
   return (
@@ -84,7 +89,7 @@ function ProtectedData(props) {
 
   const headers = props.protectedData.headers.map((x, i) => {
     return (
-      <th key={i}>{x}</th>
+      <th key={i}>{x.text}</th>
     );
   });
 
@@ -146,9 +151,27 @@ class App extends Component {
   }
 
   handleProtect() {
-    this.setState({
-      protectedData: protectData(this.state.data),
-      step: 'ProtectedData',
+    $.ajax({
+      type: "POST",
+      url: "/protect",
+      contentType: "application/json",
+      dataType: "json",
+      success: (data) => {
+        this.setState({
+          protectedData: data,
+          step: 'ProtectedData',
+        });
+      },
+      error: function (error) {
+        console.log("error");
+        console.log(error);
+      },
+      async: true,
+      data: JSON.stringify(this.state.data),
+      cache: false,
+      //contentType: false,
+      processData: false,
+      timeout: 60000
     });
   }
 
